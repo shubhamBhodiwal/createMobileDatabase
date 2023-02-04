@@ -1,0 +1,20 @@
+{
+  "name": "createrepertoryfile",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "crypto-js": "^4.1.1",
+    "fs": "0.0.1-security",
+    "iconv-lite": "^0.6.3",
+    "pg": "^8.7.3",
+    "realm": "^10.24.0",
+    "zlib": "^1.0.5"
+  }
+}
