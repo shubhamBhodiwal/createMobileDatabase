@@ -99,7 +99,7 @@ const schema = [
   },
   {
     name: "MmSection",
-    primaryKey: "section_Booksid",
+    primaryKey: "section_id",
     properties: {
       section_id: "string",
       name: "string",
@@ -283,6 +283,7 @@ const upsert = async ({ data, objectType, objectClass }) => {
 
 const writeFile = async ({ query, objectType, objectClass }) => {
   try {
+    console.log("started", objectType);
     const chunksize = 2000;
     const result = await pgPool.query(query);
     const totalCount = result.rowCount;
@@ -345,41 +346,41 @@ const writeFile = async ({ query, objectType, objectClass }) => {
 module.exports = { writeFile };
 
 const metadata = async () => {
-  const mmjson = fs.readFileSync(
-    "../homeopathy_app/public/Backend/HomeoData/MateriaMedicaData.json"
-  );
-  const JsonMMData = JSON.parse(mmjson);
-  console.log('materia medica update started');
-  await pgPool.query(`truncate materica_medica;`);
-  for (let i = 0; i < JsonMMData.length; i++) {
-    const {
-      book_id,
-      remedy_id,
-      section_id,
-      startPos,
-      endPos,
-      noOfLinesSectionsHas,
-    } = JsonMMData[i];
-    await pgPool.query(
-      `INSERT INTO public.materica_medica
-    (book_id, remedy_id, section_id, start_pos, end_pos, no_of_lines_sections_has)
-    VALUES($1, $2, $3, $4, $5, $6);`,
-      [
-        book_id,
-        remedy_id,
-        section_id,
-        startPos,
-      endPos,
-        noOfLinesSectionsHas,
-      ]
-    );
-  }
+  // const mmjson = fs.readFileSync(
+  //   "../homeopathy_app/public/Backend/HomeoData/MateriaMedicaData.json"
+  // );
+  // const JsonMMData = JSON.parse(mmjson);
+  // console.log('materia medica update started');
+  // await pgPool.query(`truncate materica_medica;`);
+  // for (let i = 0; i < JsonMMData.length; i++) {
+  //   const {
+  //     book_id,
+  //     remedy_id,
+  //     section_id,
+  //     startPos,
+  //     endPos,
+  //     noOfLinesSectionsHas,
+  //   } = JsonMMData[i];
+  //   await pgPool.query(
+  //     `INSERT INTO public.materica_medica
+  //   (book_id, remedy_id, section_id, start_pos, end_pos, no_of_lines_sections_has)
+  //   VALUES($1, $2, $3, $4, $5, $6);`,
+  //     [
+  //       book_id,
+  //       remedy_id,
+  //       section_id,
+  //       startPos,
+  //     endPos,
+  //       noOfLinesSectionsHas,
+  //     ]
+  //   );
+  // }
 
-  console.log('materia medica update completed');
+  // console.log('materia medica update completed');
 
-
-  await realmREPFile(SchemaVersion, REPFilePath);
-  await realmMMFile(SchemaVersion, MMFilePath);
+  // await realmREPFile(SchemaVersion, REPFilePath);
+  // await realmMMFile(SchemaVersion, MMFilePath);
+  console.log("started metadata");
   realm = await Realm.open(config(SchemaVersion, metadataPath));
   let data;
   data = await writeFile({
@@ -392,6 +393,7 @@ const metadata = async () => {
     objectClass: MMJson,
     objectType: "MmJson",
   });
+  console.log("MMJSON");
   data = await pgPool.query(
     "select book_id from book_info where book_id in (select book_id from book);"
   );
@@ -404,6 +406,8 @@ const metadata = async () => {
     objectClass: Book,
     objectType: "Book",
   });
+  console.log("Book");
+
   data = await writeFile({
     query: `select  mm.remedy_id, LOWER(r."name") as remedy_name , LOWER(r.abbreviation) as remedy_abbr, array_agg(mm.section_id) as section_id_arr
         from materica_medica mm inner join remedy r on r.remedy_id = mm.remedy_id + 1 
@@ -412,16 +416,19 @@ const metadata = async () => {
     objectClass: MMRemedy,
     objectType: "MmRemedy",
   });
+  console.log("MMRemedy");
   data = await writeFile({
     query: `select section_id , LOWER(name) as name, book_id, rubric_id from rubric r  where level_id = 0 order by book_id,  rubric_order;`,
     objectClass: Section,
     objectType: "Section",
   });
+  console.log("Section");
   data = await writeFile({
     query: `select author_number ,LOWER(name) as name ,LOWER(abbreviation) as abbreviation  from author a where author_type = 'MacRepID'`,
     objectClass: Author,
     objectType: "Author",
   });
+  console.log("Author");
   data = await writeFile({
     query: `select  r.remedy_id ,LOWER(r.name) as name, LOWER(r.abbreviation) as abbreviation, r.frequency, r.family_id , 
         concat('rgb(',f.color_red,',',f.color_green,',', f.color_blue,')') as color
@@ -429,12 +436,14 @@ const metadata = async () => {
     objectClass: Remedy,
     objectType: "Remedy",
   });
+  console.log("Remedy");
   data = await writeFile({
     query: `select family_remedy_mapping_id as id ,family_id , remedy_id from 
         family_remedy_mapping frm;`,
     objectClass: FamilyRemedyMapping,
     objectType: "Family_Remedy_Mapping",
   });
+  console.log("Family_Remedy_mapping");
   data = await writeFile({
     query: `select family_id, parent_id, level_id, is_leaf, LOWER(name) as name, super_parent_id , 
                 family_hierarchy , family_order ,concat('rgb(',color_red,',',color_green,',', color_blue,')') 
@@ -442,6 +451,8 @@ const metadata = async () => {
     objectClass: Family,
     objectType: "Family",
   });
+  console.log("family");
+
   data = await writeFile({
     query: `select   mm.book_id ,LOWER(onm.book_name) as book_name, array_agg(distinct mm.section_id) as section_id_arr, array_agg(distinct mm.remedy_id) as remedy_id_arr
             from materica_medica mm inner join oldbookid_newbookid_mapping onm on mm.book_id = onm.old_book_id 
@@ -449,17 +460,20 @@ const metadata = async () => {
     objectClass: RefBook,
     objectType: "RefBook",
   });
+  console.log("Refbook");
   data = await writeFile({
     query: `select array_agg(section_id) as section_id, LOWER(name) as name 
             from "section_mm" group by LOWER(name) order by LOWER(name);`,
     objectClass: MMSection,
     objectType: "MmSection",
   });
+  console.log("MMSection");
   data = await writeFile({
     query: `select word_id, word_text, "language"  from word ;`,
     objectClass: Word,
     objectType: "Word",
   });
+  console.log("word");
   console.log("metadata file created");
   fs.rmdir(metadataPath + "/db.realm.management", (err) => {
     if (err) console.log(err);

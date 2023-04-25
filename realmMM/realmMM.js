@@ -157,7 +157,6 @@ const realmMMFile = async (SchemaVersion, FileCreationPath) => {
     // console.log({ book_number: i });
   }
   console.log("all book completed");
-  exit();
 };
 
 // const getdata = async (book_id) => {
