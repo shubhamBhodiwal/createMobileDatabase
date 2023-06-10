@@ -1,10 +1,13 @@
-let connectionString =
-  "postgresql://synergy_user:cAnGESON@127.0.0.1:5440/synergy_app";
 const pg = require("pg");
 const Realm = require("realm");
+const {
+  SCHEMA_VERSION,
+  REP_FILE_PATH,
+  DATABASE_CONNECTION_STRING,
+} = require("../config");
 
 const pgPool = new pg.Pool({
-  connectionString: connectionString,
+  connectionString: DATABASE_CONNECTION_STRING,
 });
 
 const schema = [
@@ -55,6 +58,7 @@ const schema = [
 ];
 
 const config = (book_id, version, path) => {
+  console.log(book_id, version, path)
   return {
     path: `${path}/${book_id}-REP.realm`,
     schema,
@@ -130,16 +134,9 @@ class CrossReferenceMapping {
   }
 }
 
-const upsert = async ({
-  data,
-  book_id,
-  objectType,
-  objectClass,
-  SchemaVersion,
-  FileCreationPath,
-}) => {
+const upsert = async ({ data, book_id, objectType, objectClass }) => {
   if (!realm) {
-    realm = await Realm.open(config(book_id, SchemaVersion, FileCreationPath));
+    realm = await Realm.open(config(book_id, SCHEMA_VERSION, REP_FILE_PATH));
   }
   return await new Promise((resolve, reject) => {
     try {
@@ -163,25 +160,26 @@ const upsert = async ({
   });
 };
 
-const realmREPFile = async (SchemaVersion, FileCreationPath) => {
+const realmREPFile = async () => {
   try {
     const books = await pgPool.query(
-      `select distinct book_id from book_info where book_id in (select book_id from book where book_id IN( 110000088, 110000002, 110000004, 110000005, 110000006, 110000007, 110000008, 110000009, 110000037, 110000050, 110000054, 110000087));`
+      `select book_id from book_info where book_id in (select book_id from book) and book_id in (select distinct book_id from rubric r );`
     );
     console.log(books.rowCount, books.rows);
     const bookList = books.rows;
     for (let i = 0; i < bookList.length; i++) {
       realm = await Realm.open(
-        config(bookList[i].book_id, SchemaVersion, FileCreationPath)
+        config(bookList[i].book_id, SCHEMA_VERSION, REP_FILE_PATH)
       );
 
-      // console.log(i, { book_id: bookList[i].book_id });
+      console.log(i, { book_id: bookList[i].book_id });
       const rubrics =
         await pgPool.query(`select  distinct rubric_id, book_id, section_id, name, level_id, parent_id, rubric_hierarchy, 
                     rubric_order, has_child, super_parent_id, rubric_hierarchy_id, remedy_id_arr from rubric where book_id = ${bookList[i].book_id}`);
 
       const totalCount = rubrics.rowCount;
       for (let size = 0; size < totalCount; size = size + 1000) {
+        console.log(size, totalCount)
         const rubricIds = [];
         const rubric = rubrics.rows.slice(size, size + 1000);
         rubric.forEach((r) => {
@@ -203,35 +201,24 @@ const realmREPFile = async (SchemaVersion, FileCreationPath) => {
       )}}')`
           );
         }
-        // console.log('getting data')
         await upsert({
           objectClass: Rubric,
           objectType: "Rubric",
           data: rubric,
           book_id: bookList[i].book_id,
-          SchemaVersion,
-          FileCreationPath,
         });
         await upsert({
           objectClass: RubricRemedyMapping,
           objectType: "Rubric_Remedy_Mapping",
           data: rubricRemedyMapping.rows,
           book_id: bookList[i].book_id,
-          SchemaVersion,
-          FileCreationPath,
         });
-        // console.log("crossReferenceMapping", crossReferenceMapping.rows.length);
         await upsert({
           objectClass: CrossReferenceMapping,
           objectType: "Rubric_Cross_Reference_Mapping",
           data: crossReferenceMapping.rows,
           book_id: bookList[i].book_id,
-          SchemaVersion,
-          FileCreationPath,
         });
-
-        //code here
-        // console.log(size, totalCount);
       }
       console.log("completed", { book_id: bookList[i].book_id, totalCount });
     }
@@ -239,30 +226,5 @@ const realmREPFile = async (SchemaVersion, FileCreationPath) => {
     console.log("writefile =======>", Err);
   }
 };
-
-// writeFile();
-
-// const runDatabaseQuery = async () => {
-//   // const crossReferenceMapping = await pgPool.query(
-//   //   `select cr.cross_reference_id, cr.rubric_id, cr.cross_reference_rubric_id, cr.cross_ref_hierarchy, r.book_id, r.section_id, r.rubric_hierarchy_id,
-//   //     cr.bracket_details , b.book_name from cross_reference cr left join rubric r on r.rubric_id = cr.cross_reference_rubric_id left join book b on
-//   //     b.book_id = r.book_id where cr.rubric_id = 23101245`);
-//   // console.log(crossReferenceMapping?.rows)
-
-//   const result = await pgPool.query('select * from mobile_database');
-//         // const rows = result.rows.filter(item => new Date(item.last_updated)<= new Date()).sort((a,b)=> {
-//         //   if(new Date(a.last_updated)<new Date(b.last_updated))
-//         //   {return -1;
-//         //   }else
-//         //   if(new Date(a.last_updated)>new Date(b.last_updated))
-//         //   {return -1;
-//         //   }else{
-//         //     return 0;
-//         //   }
-//         //   })
-//         console.log( result.rows?.map(item =>( {version:item.version, last_updated: item.last_updated })));
-// }
-
-// runDatabaseQuery();
 
 module.exports = { realmREPFile };

@@ -1,16 +1,23 @@
-let connectionString =
-  "postgresql://synergy_user:cAnGESON@127.0.0.1:5440/synergy_app";
 const pg = require("pg");
 const Realm = require("realm");
 const fs = require("fs");
+const util = require("util");
+const iconv = require("iconv-lite");
+const path = require("path");
+
+const {
+  DATABASE_CONNECTION_STRING,
+  SCHEMA_VERSION,
+  MM_FILE_PATH,
+  HOMEO_DATA_PATH,
+  MATERIA_MEDICA_PATH,
+} = require("../config");
+const { readJSONDataFromFile } = require("../utils/readJson");
+const { insertMMData } = require("../utils/indertData");
 
 const pgPool = new pg.Pool({
-  connectionString: connectionString,
+  connectionString: DATABASE_CONNECTION_STRING,
 });
-
-const constants = {
-  REALM_TABLE_MMBOOK: "MmBook",
-};
 
 const schema = [
   {
@@ -32,6 +39,7 @@ const schema = [
 ];
 
 const config = (book_id, version, path) => {
+  console.log(`${path}/${book_id}-MM.realm`)
   return {
     path: `${path}/${book_id}-MM.realm`,
     schema,
@@ -67,9 +75,9 @@ class MMBook {
   }
 }
 
-const upsert = async ({ data, book_id, SchemaVersion, FileCreationPath }) => {
+const upsert = async ({ data, book_id }) => {
   if (!realm) {
-    realm = await Realm.open(config(book_id, SchemaVersion, FileCreationPath));
+    realm = await Realm.open(config(book_id, SCHEMA_VERSION, MM_FILE_PATH));
   }
   return await new Promise((resolve, reject) => {
     try {
@@ -90,83 +98,66 @@ const upsert = async ({ data, book_id, SchemaVersion, FileCreationPath }) => {
   });
 };
 
-const insertBook = async (book_id, SchemaVersion, FileCreationPath) => {
-  realm = await Realm.open(config(book_id, SchemaVersion, FileCreationPath));
+const insertBook = async (book_id, MMData = []) => {
+  if (fs.existsSync(HOMEO_DATA_PATH + `${book_id}.data`)) {
+    realm = await Realm.open(config(book_id, SCHEMA_VERSION, MM_FILE_PATH));
 
-  const result =
-    await pgPool.query(`select book_id , mm2.remedy_id , mm2.section_id , start_pos , end_pos , 
+    const result =
+      await pgPool.query(`select book_id , mm2.remedy_id , mm2.section_id , start_pos , end_pos , 
     no_of_lines_sections_has, r.name as remedy_name, sm.name as section_name  from materica_medica mm2 
    inner join remedy r on r.remedy_id = mm2.remedy_id + 1
   inner join section_mm sm  on sm.section_id = mm2.section_id  where book_id = ${book_id} order by start_pos;`);
-  const MMData = result.rows;
-  const indexlen = result.rowCount;
-  const fs = require("fs");
-  const util = require("util");
-  const iconv = require("iconv-lite");
-  const fs_read = util.promisify(fs.read);
-  const fs_open = util.promisify(fs.open);
-  const fs_readFile = util.promisify(fs.readFile);
-  const fs_close = util.promisify(fs.close);
-  const path = require("path");
-  const bookFD = await fs_open(
-    path.join(
-      "/home/ubuntu/homeopathy_app/public/Backend/HomeoData/Books-Text",
-      `${book_id}.data`
-    ),
-    "r"
-  );
-  const book = bookFD;
+    const MMData = result.rows;
+    const indexlen = result.rowCount;
 
-  // console.log({ indexlen })
-  for (let i = 0; i < indexlen; i++) {
-    const item = MMData[i];
-    const buffer = Buffer.alloc(item.end_pos - item.start_pos);
-    let lineBufferObj = await fs_read(
-      book,
-      buffer,
-      0,
-      item.end_pos - item.start_pos,
-      item.start_pos + 1
+    const fs_read = util.promisify(fs.read);
+    const fs_open = util.promisify(fs.open);
+    const bookFD = await fs_open(
+      path.join(HOMEO_DATA_PATH, `${book_id}.data`),
+      "r"
     );
-    // await fs_close(book);
+    const book = bookFD;
 
-    const Y = 10,
-      X = 5;
-    lineBufferObj = lineBufferObj.buffer
-      .map((val) => (val + 256 - Y * 16 - X) % 256)
-      .map((val) => (val === 13 ? 10 : val));
-    const line_text = iconv.decode(lineBufferObj, "macroman");
-    await upsert(
-      { data: { ...item, text_data: line_text }, book_id },
-      SchemaVersion,
-      FileCreationPath
-    );
-    // console.log({ i, indexlen });
+    // console.log({ indexlen })
+    for (let i = 0; i < indexlen; i++) {
+      const item = MMData[i];
+      const buffer = Buffer.alloc(
+        Number(item.end_pos) - Number(item.start_pos)
+      );
+      let lineBufferObj = await fs_read(
+        book,
+        buffer,
+        0,
+        Number(item.end_pos) - Number(item.start_pos),
+        Number(item.start_pos) + 1
+      );
+      // await fs_close(book);
+      const Y = 10,
+        X = 5;
+      lineBufferObj = lineBufferObj.buffer
+        .map((val) => (val + 256 - Y * 16 - X) % 256)
+        .map((val) => (val === 13 ? 10 : val));
+      const line_text = iconv.decode(lineBufferObj, "macroman");
+      await upsert({ data: { ...item, text_data: line_text }, book_id });
+      // console.log({ i, indexlen });
+    }
+    console.log("completed", { book_id });
+  } else {
+    console.log("Error => .data file not found for book " + book_id);
   }
-  console.log("completed", {book_id});
 };
+const realmMMFile = async () => {
+  // const materiaMedicaData = await readJSONDataFromFile(MATERIA_MEDICA_PATH);
 
-const realmMMFile = async (SchemaVersion, FileCreationPath) => {
+  // await insertMMData(pgPool,materiaMedicaData);
+
   const result = await pgPool.query(
     "select distinct book_id from materica_medica mm2 order by book_id ;"
   );
-  // const result = {rows:[{book_id:134},{book_id: 137}],rowCount:2}
-  // console.log(result.rows.map((e) => e.book_id));
   for (let i = 0; i < result.rowCount; i++) {
-    await insertBook(result.rows[i].book_id, SchemaVersion, FileCreationPath);
-    // console.log({ book_number: i });
+    await insertBook(result.rows[i].book_id);
   }
   console.log("all book completed");
 };
-
-// const getdata = async (book_id) => {
-//     if (!realm) {
-//         realm = await Realm.open(config(book_id, SchemaVersion, FileCreationPath))
-//     }
-//     const data = await realm.objects('MmBook');
-//     console.log({ data });
-//     realm.close();
-
-// }
 
 module.exports = { realmMMFile };
