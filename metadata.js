@@ -321,124 +321,124 @@ const writeFile = async ({ query, objectType, objectClass }) => {
 };
 
 const metadata = async () => {
-  // await realmREPFile();
+  await realmREPFile();
   await realmMMFile();
 
-  // realm = await Realm.open(config(SCHEMA_VERSION, METADATA_FILE_PATH));
+  realm = await Realm.open(config(SCHEMA_VERSION, METADATA_FILE_PATH));
 
-  // let data;
-  // data = await writeFile({
-  //   query: `select mm2.book_id , mm2.remedy_id , mm2.section_id , mm2.start_pos , mm2.end_pos ,
-  //       mm2.no_of_lines_sections_has, LOWER(onm2.book_name) as book_name, LOWER(r."name" )as remedy_name , LOWER(r.abbreviation) as remedy_abbr, LOWER(sm.name)
-  //        as section_name  from materica_medica mm2 inner join  oldbookid_newbookid_mapping onm2
-  //       on mm2.book_id = onm2.old_book_id inner join remedy r on r.remedy_id = mm2.remedy_id + 1  inner join section_mm sm on sm.section_id = mm2.section_id
-  //       where book_id  = any(select old_book_id from
-  //           oldbookid_newbookid_mapping onm where new_book_id = any(select book_id from customer_books cb)) `,
-  //   objectClass: MMJson,
-  //   objectType: "MmJson",
-  // });
-  // console.log("MMJSON");
-  // data = await pgPool.query(
-  //   "select book_id from book_info where book_id in (select book_id from book) and book_id in (select distinct book_id from rubric r );"
-  // );
-  // data = await writeFile({
-  //   query: ` select LOWER(b.book_name) as book_name , b.book_id, bi.author, bi.abbreviation, bi."language"  from
-  //   book b left join book_info bi on  bi.book_id = b.book_id
-  //   where b.book_id = any('{${data.rows
-  //     .map((item) => item.book_id)
-  //     .join(",")}}');`,
-  //   objectClass: Book,
-  //   objectType: "Book",
-  // });
-  // console.log("Book");
-  // data = await writeFile({
-  //   query: `select  mm.remedy_id, LOWER(r."name") as remedy_name , LOWER(r.abbreviation) as remedy_abbr, array_agg(mm.section_id) as section_id_arr
-  //       from materica_medica mm inner join remedy r on r.remedy_id = mm.remedy_id + 1
-  //        where book_id = any(select old_book_id from oldbookid_newbookid_mapping onm where new_book_id =
-  //           any(select book_id from customer_books cb)) group by mm.remedy_id , r.name, r.abbreviation`,
-  //   objectClass: MMRemedy,
-  //   objectType: "MmRemedy",
-  // });
-  // console.log("MMRemedy");
-  // data = await writeFile({
-  //   query: `select section_id , LOWER(name) as name, book_id, rubric_id from rubric r  where level_id = 0 order by book_id,  rubric_order;`,
-  //   objectClass: Section,
-  //   objectType: "Section",
-  // });
-  // console.log("Section");
-  // data = await writeFile({
-  //   query: `select author_number ,LOWER(name) as name ,LOWER(abbreviation) as abbreviation  from author a where author_type = 'MacRepID'`,
-  //   objectClass: Author,
-  //   objectType: "Author",
-  // });
-  // console.log("Author");
-  // data = await writeFile({
-  //   query: `select  r.remedy_id ,LOWER(r.name) as name, LOWER(r.abbreviation) as abbreviation, r.frequency, r.family_id ,
-  //       concat('rgb(',f.color_red,',',f.color_green,',', f.color_blue,')') as color
-  //                     from remedy r left join family f on f.family_id = r.family_id;`,
-  //   objectClass: Remedy,
-  //   objectType: "Remedy",
-  // });
-  // console.log("Remedy");
-  // data = await writeFile({
-  //   query: `select family_remedy_mapping_id as id ,family_id , remedy_id from
-  //       family_remedy_mapping frm;`,
-  //   objectClass: FamilyRemedyMapping,
-  //   objectType: "Family_Remedy_Mapping",
-  // });
-  // console.log("Family_Remedy_mapping");
-  // data = await writeFile({
-  //   query: `select family_id, parent_id, level_id, is_leaf, LOWER(name) as name, super_parent_id ,
-  //               family_hierarchy , family_order ,concat('rgb(',color_red,',',color_green,',', color_blue,')')
-  //               as family_color, top_parent_id from family`,
-  //   objectClass: Family,
-  //   objectType: "Family",
-  // });
-  // console.log("family");
+  let data;
+  data = await writeFile({
+    query: `select mm2.book_id , mm2.remedy_id , mm2.section_id , mm2.start_pos , mm2.end_pos ,
+        mm2.no_of_lines_sections_has, LOWER(onm2.book_name) as book_name, LOWER(r."name" )as remedy_name , LOWER(r.abbreviation) as remedy_abbr, LOWER(sm.name)
+         as section_name  from materica_medica mm2 inner join  oldbookid_newbookid_mapping onm2
+        on mm2.book_id = onm2.old_book_id inner join remedy r on r.remedy_id = mm2.remedy_id + 1  inner join section_mm sm on sm.section_id = mm2.section_id
+        where book_id  = any(select old_book_id from
+            oldbookid_newbookid_mapping onm where new_book_id = any(select book_id from customer_books cb)) `,
+    objectClass: MMJson,
+    objectType: "MmJson",
+  });
+  console.log("MMJSON");
+  data = await pgPool.query(
+    "select book_id from book_info where book_id in (select book_id from book) and book_id in (select distinct book_id from rubric r );"
+  );
+  data = await writeFile({
+    query: ` select LOWER(b.book_name) as book_name , b.book_id, bi.author, bi.abbreviation, bi."language"  from
+    book b left join book_info bi on  bi.book_id = b.book_id
+    where b.book_id = any('{${data.rows
+      .map((item) => item.book_id)
+      .join(",")}}');`,
+    objectClass: Book,
+    objectType: "Book",
+  });
+  console.log("Book");
+  data = await writeFile({
+    query: `select  mm.remedy_id, LOWER(r."name") as remedy_name , LOWER(r.abbreviation) as remedy_abbr, array_agg(mm.section_id) as section_id_arr
+        from materica_medica mm inner join remedy r on r.remedy_id = mm.remedy_id + 1
+         where book_id = any(select old_book_id from oldbookid_newbookid_mapping onm where new_book_id =
+            any(select book_id from customer_books cb)) group by mm.remedy_id , r.name, r.abbreviation`,
+    objectClass: MMRemedy,
+    objectType: "MmRemedy",
+  });
+  console.log("MMRemedy");
+  data = await writeFile({
+    query: `select section_id , LOWER(name) as name, book_id, rubric_id from rubric r  where level_id = 0 order by book_id,  rubric_order;`,
+    objectClass: Section,
+    objectType: "Section",
+  });
+  console.log("Section");
+  data = await writeFile({
+    query: `select author_number ,LOWER(name) as name ,LOWER(abbreviation) as abbreviation  from author a where author_type = 'MacRepID'`,
+    objectClass: Author,
+    objectType: "Author",
+  });
+  console.log("Author");
+  data = await writeFile({
+    query: `select  r.remedy_id ,LOWER(r.name) as name, LOWER(r.abbreviation) as abbreviation, r.frequency, r.family_id ,
+        concat('rgb(',f.color_red,',',f.color_green,',', f.color_blue,')') as color
+                      from remedy r left join family f on f.family_id = r.family_id;`,
+    objectClass: Remedy,
+    objectType: "Remedy",
+  });
+  console.log("Remedy");
+  data = await writeFile({
+    query: `select family_remedy_mapping_id as id ,family_id , remedy_id from
+        family_remedy_mapping frm;`,
+    objectClass: FamilyRemedyMapping,
+    objectType: "Family_Remedy_Mapping",
+  });
+  console.log("Family_Remedy_mapping");
+  data = await writeFile({
+    query: `select family_id, parent_id, level_id, is_leaf, LOWER(name) as name, super_parent_id ,
+                family_hierarchy , family_order ,concat('rgb(',color_red,',',color_green,',', color_blue,')')
+                as family_color, top_parent_id from family`,
+    objectClass: Family,
+    objectType: "Family",
+  });
+  console.log("family");
 
-  // data = await writeFile({
-  //   query: `select   mm.book_id, LOWER(onm.book_name) as book_name, array_agg(distinct mm.section_id) as section_id_arr, array_agg(distinct mm.remedy_id) as remedy_id_arr,
-  //    bi."language" from materica_medica mm inner join oldbookid_newbookid_mapping onm on mm.book_id = onm.old_book_id  
-  //    inner join book_info bi on bi.book_id = onm.new_book_id
-  //    where onm.new_book_id = any(select book_id from customer_books cb) group by mm.book_id, onm.book_name, bi."language" `,
-  //   objectClass: RefBook,
-  //   objectType: "RefBook",
-  // });
-  // console.log("Refbook");
-  // data = await writeFile({
-  //   query: `select array_agg(section_id) as section_id, LOWER(name) as name
-  //           from "section_mm" group by LOWER(name) order by LOWER(name);`,
-  //   objectClass: MMSection,
-  //   objectType: "MmSection",
-  // });
-  // console.log("MMSection");
-  // data = await writeFile({
-  //   query: `select word_id, word_text, "language"  from word ;`,
-  //   objectClass: Word,
-  //   objectType: "Word",
-  // });
-  // console.log("word");
-  // console.log("metadata file created");
+  data = await writeFile({
+    query: `select   mm.book_id, LOWER(onm.book_name) as book_name, array_agg(distinct mm.section_id) as section_id_arr, array_agg(distinct mm.remedy_id) as remedy_id_arr,
+     bi."language" from materica_medica mm inner join oldbookid_newbookid_mapping onm on mm.book_id = onm.old_book_id  
+     inner join book_info bi on bi.book_id = onm.new_book_id
+     where onm.new_book_id = any(select book_id from customer_books cb) group by mm.book_id, onm.book_name, bi."language" `,
+    objectClass: RefBook,
+    objectType: "RefBook",
+  });
+  console.log("Refbook");
+  data = await writeFile({
+    query: `select array_agg(section_id) as section_id, LOWER(name) as name
+            from "section_mm" group by LOWER(name) order by LOWER(name);`,
+    objectClass: MMSection,
+    objectType: "MmSection",
+  });
+  console.log("MMSection");
+  data = await writeFile({
+    query: `select word_id, word_text, "language"  from word ;`,
+    objectClass: Word,
+    objectType: "Word",
+  });
+  console.log("word");
+  console.log("metadata file created");
 
-  // fs.rmdir(METADATA_FILE_PATH + "/db.realm.management", (err) => {
-  //   if (err) console.log(err);
-  //   else {
-  //     console.log("db.realm.management ");
-  //   }
-  // });
-  // fs.unlink(METADATA_FILE_PATH + "/db.realm.lock", (err) => {
-  //   if (err) console.log(err);
-  //   else {
-  //     console.log("db.realm.lock ");
-  //   }
-  // });
-  // fs.unlink(METADATA_FILE_PATH + "/db.realm.note", (err) => {
-  //   if (err) console.log(err);
-  //   else {
-  //     console.log("db.realm.note ");
-  //   }
-  // });
-  // process.exit(1);
+  fs.rmdir(METADATA_FILE_PATH + "/db.realm.management", (err) => {
+    if (err) console.log(err);
+    else {
+      console.log("db.realm.management ");
+    }
+  });
+  fs.unlink(METADATA_FILE_PATH + "/db.realm.lock", (err) => {
+    if (err) console.log(err);
+    else {
+      console.log("db.realm.lock ");
+    }
+  });
+  fs.unlink(METADATA_FILE_PATH + "/db.realm.note", (err) => {
+    if (err) console.log(err);
+    else {
+      console.log("db.realm.note ");
+    }
+  });
+  process.exit(1);
 };
 
 metadata();
