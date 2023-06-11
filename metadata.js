@@ -3,7 +3,13 @@ const fs = require("fs");
 const Realm = require("realm");
 const { realmMMFile } = require("./realmMM/realmMM");
 const { realmREPFile } = require("./realmREP/realmREP");
-const { DATABASE_CONNECTION_STRING, SCHEMA_VERSION, METADATA_FILE_PATH } = require("./config");
+const {
+  DATABASE_CONNECTION_STRING,
+  SCHEMA_VERSION,
+  METADATA_FILE_PATH,
+  MM_FILE_PATH,
+  REP_FILE_PATH,
+} = require("./config");
 
 const pgPool = new pg.Pool({
   connectionString: DATABASE_CONNECTION_STRING,
@@ -208,7 +214,6 @@ class Section {
 }
 class MMRemedy {
   constructor(remedy) {
-    console.lo;
     this.remedy_id = Number(remedy[0]);
     this.remedy_name = remedy[1] ? remedy[1] : null;
     this.remedy_abbr = remedy[2] ? remedy[2] : null;
@@ -257,24 +262,16 @@ class FamilyRemedyMapping {
 
 const upsert = async ({ data, objectType, objectClass }) => {
   return await new Promise((resolve, reject) => {
-    try {
-      let _data;
       realm.write(() => {
-        const arr = [];
         for (let i = 0; i < data.length; i++) {
-          const modifiedData = realm.create(
-            objectType,
-            new objectClass(data[i]),
-            "modified"
-          );
-          arr.push(JSON.parse(JSON.stringify(modifiedData)));
+        try {
+          realm.create(objectType, new objectClass(data[i]), "modified");
+        } catch (err) {
+          console.log(err);
         }
-        _data = arr;
+      }
       });
-      resolve(_data);
-    } catch (err) {
-      reject(err);
-    }
+    resolve("success");
   });
 };
 
