@@ -140,10 +140,12 @@ const upsert = async ({ data, book_id, objectType, objectClass }) => {
   }
   return await new Promise((resolve, reject) => {
     realm.write(() => {
-      try {
-        realm.create(objectType, new objectClass(data[i]), "modified");
-      } catch (err) {
-        console.log(err);
+      for (let i = 0; i < data.length; i++) {
+        try {
+          realm.create(objectType, new objectClass(data[i]), "modified");
+        } catch (err) {
+          console.log(err);
+        }
       }
     });
   });
