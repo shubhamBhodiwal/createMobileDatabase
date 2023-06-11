@@ -286,38 +286,45 @@ const writeFile = async ({ query, objectType, objectClass }) => {
   try {
     console.log("started", objectType);
     const chunksize = 2000;
-    const result = await pgPool.query(query);
-    const totalCount = result.rowCount;
-    console.log({ totalCount, objectType });
-    for (let size = 0; size < totalCount; size = size + chunksize) {
-      let data;
-      if (objectType === "Book") {
-        data = result.rows.slice(size, size + chunksize).map((r) => {
-          return Object.values({
-            ...r,
-            size: Math.ceil(
-              fs.statSync(REP_FILE_PATH + `/${r.book_id}-REP.realm`).size /
-                (1024 * 1024)
-            ),
-          });
-        });
-      } else if (objectType === "RefBook") {
-        data = result.rows.slice(size, size + chunksize).map((r) => {
-          return Object.values({
-            ...r,
-            size: Math.ceil(
-              fs.statSync(MM_FILE_PATH + `/${r.book_id}-MM.realm`).size /
-                (1024 * 1024)
-            ),
-          });
-        });
-      } else {
-        data = result.rows
-          .slice(size, size + chunksize)
-          .map((e) => Object.values(e));
+    for (let limit = 0; ; limit += 1000000) {
+      const result = await pgPool.query(
+        query + ` offset ${limit} limit ${limit + 1000000}`
+      );
+      const totalCount = result.rowCount;
+      if (!totalCount) {
+        break;
       }
-      await upsert({ data, objectType, objectClass });
-      console.log({ size, totalCount });
+      console.log({ totalCount, objectType });
+      for (let size = 0; size < totalCount; size = size + chunksize) {
+        let data;
+        if (objectType === "Book") {
+          data = result.rows.slice(size, size + chunksize).map((r) => {
+            return Object.values({
+              ...r,
+              size: Math.ceil(
+                fs.statSync(REP_FILE_PATH + `/${r.book_id}-REP.realm`).size /
+                  (1024 * 1024)
+              ),
+            });
+          });
+        } else if (objectType === "RefBook") {
+          data = result.rows.slice(size, size + chunksize).map((r) => {
+            return Object.values({
+              ...r,
+              size: Math.ceil(
+                fs.statSync(MM_FILE_PATH + `/${r.book_id}-MM.realm`).size /
+                  (1024 * 1024)
+              ),
+            });
+          });
+        } else {
+          data = result.rows
+            .slice(size, size + chunksize)
+            .map((e) => Object.values(e));
+        }
+        await upsert({ data, objectType, objectClass });
+        console.log({ size, totalCount });
+      }
     }
   } catch (Err) {
     console.log("writefile =======>", Err);
@@ -339,20 +346,20 @@ const metadata = async () => {
     inner join book_info bi on onm2.new_book_id = bi.book_id
     inner join remedy r on r.remedy_id = mm2.remedy_id + 1  inner join section_mm sm on sm.section_id = mm2.section_id
     where mm2.book_id  = any(select old_book_id from
-        oldbookid_newbookid_mapping onm where new_book_id = any(select book_id from customer_books cb)) `,
+        oldbookid_newbookid_mapping onm where new_book_id = any(select book_id from customer_books cb))`,
     objectClass: MMJson,
     objectType: "MmJson",
   });
   console.log("MMJSON");
   data = await pgPool.query(
-    "select book_id from book_info where book_id in (select book_id from book) and book_id in (select distinct book_id from rubric r );"
+    "select book_id from book_info where book_id in (select book_id from book) and book_id in (select distinct book_id from rubric r )"
   );
   data = await writeFile({
     query: ` select LOWER(b.book_name) as book_name , b.book_id, bi.author, bi.abbreviation, bi."language"  from
     book b left join book_info bi on  bi.book_id = b.book_id
     where b.book_id = any('{${data.rows
       .map((item) => item.book_id)
-      .join(",")}}');`,
+      .join(",")}}')`,
     objectClass: Book,
     objectType: "Book",
   });
@@ -367,7 +374,7 @@ const metadata = async () => {
   });
   console.log("MMRemedy");
   data = await writeFile({
-    query: `select section_id , LOWER(name) as name, book_id, rubric_id from rubric r  where level_id = 0 order by book_id,  rubric_order;`,
+    query: `select section_id , LOWER(name) as name, book_id, rubric_id from rubric r  where level_id = 0 order by book_id,  rubric_order`,
     objectClass: Section,
     objectType: "Section",
   });
@@ -381,14 +388,14 @@ const metadata = async () => {
   data = await writeFile({
     query: `select  r.remedy_id ,LOWER(r.name) as name, LOWER(r.abbreviation) as abbreviation, r.frequency, r.family_id ,
         concat('rgb(',f.color_red,',',f.color_green,',', f.color_blue,')') as color
-                      from remedy r left join family f on f.family_id = r.family_id;`,
+                      from remedy r left join family f on f.family_id = r.family_id`,
     objectClass: Remedy,
     objectType: "Remedy",
   });
   console.log("Remedy");
   data = await writeFile({
     query: `select family_remedy_mapping_id as id ,family_id , remedy_id from
-        family_remedy_mapping frm;`,
+        family_remedy_mapping frm`,
     objectClass: FamilyRemedyMapping,
     objectType: "Family_Remedy_Mapping",
   });
@@ -413,13 +420,13 @@ const metadata = async () => {
   console.log("Refbook");
   data = await writeFile({
     query: `select array_agg(section_id) as section_id, LOWER(name) as name
-            from "section_mm" group by LOWER(name) order by LOWER(name);`,
+            from "section_mm" group by LOWER(name) order by LOWER(name)`,
     objectClass: MMSection,
     objectType: "MmSection",
   });
   console.log("MMSection");
   data = await writeFile({
-    query: `select word_id, word_text, "language"  from word ;`,
+    query: `select word_id, word_text, "language"  from word `,
     objectClass: Word,
     objectType: "Word",
   });
