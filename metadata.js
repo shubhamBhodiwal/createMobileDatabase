@@ -119,8 +119,9 @@ const schema = [
   },
   {
     name: "Book",
-    primaryKey: "book_id",
+    primaryKey: "_id",
     properties: {
+      _id: "string",
       book_id: "int",
       book_name: "string",
       author: "string?",
@@ -227,11 +228,12 @@ class MMRemedy {
 }
 class Book {
   constructor(book) {
+    this._id = `${book[0]};${book[4] || "English"}`;
     this.book_name = book[0];
     this.book_id = Number(book[1]);
     this.author = book[2];
     this.abbreviation = book[3];
-    this.language = book[4];
+    this.language = book[4] || "English";
     this.size = book[5] ? Number(book[5]) : 0;
   }
 }
@@ -267,15 +269,15 @@ class FamilyRemedyMapping {
 
 const upsert = async ({ data, objectType, objectClass }) => {
   return await new Promise((resolve, reject) => {
-      realm.write(() => {
-        for (let i = 0; i < data.length; i++) {
+    realm.write(() => {
+      for (let i = 0; i < data.length; i++) {
         try {
           realm.create(objectType, new objectClass(data[i]), "modified");
         } catch (err) {
           console.log(err);
         }
       }
-      });
+    });
     resolve("success");
   });
 };
