@@ -58,7 +58,7 @@ const schema = [
 ];
 
 const config = (book_id, version, path) => {
-  console.log(book_id, version, path)
+  console.log(book_id, version, path);
   return {
     path: `${path}/${book_id}-REP.realm`,
     schema,
@@ -139,24 +139,13 @@ const upsert = async ({ data, book_id, objectType, objectClass }) => {
     realm = await Realm.open(config(book_id, SCHEMA_VERSION, REP_FILE_PATH));
   }
   return await new Promise((resolve, reject) => {
-    try {
-      let _data;
-      realm.write(() => {
-        const arr = [];
-        for (let i = 0; i < data.length; i++) {
-          const modifiedData = realm.create(
-            objectType,
-            new objectClass(data[i]),
-            "modified"
-          );
-          arr.push(JSON.parse(JSON.stringify(modifiedData)));
-        }
-        _data = arr;
-      });
-      resolve(_data);
-    } catch (err) {
-      reject(err);
-    }
+    realm.write(() => {
+      try {
+        realm.create("MmBook", new MMBook(data), "modified");
+      } catch (err) {
+        console.log(err);
+      }
+    });
   });
 };
 
@@ -179,7 +168,7 @@ const realmREPFile = async () => {
 
       const totalCount = rubrics.rowCount;
       for (let size = 0; size < totalCount; size = size + 1000) {
-        console.log(size, totalCount)
+        console.log(size, totalCount);
         const rubricIds = [];
         const rubric = rubrics.rows.slice(size, size + 1000);
         rubric.forEach((r) => {

@@ -39,7 +39,7 @@ const schema = [
 ];
 
 const config = (book_id, version, path) => {
-  console.log(`${path}/${book_id}-MM.realm`)
+  console.log(`${path}/${book_id}-MM.realm`);
   return {
     path: `${path}/${book_id}-MM.realm`,
     schema,
@@ -80,21 +80,13 @@ const upsert = async ({ data, book_id }) => {
     realm = await Realm.open(config(book_id, SCHEMA_VERSION, MM_FILE_PATH));
   }
   return await new Promise((resolve, reject) => {
-    try {
-      let _data;
-      // console.log(data);
-      realm.write(() => {
-        const modifiedData = realm.create(
-          "MmBook",
-          new MMBook(data),
-          "modified"
-        );
-        _data = JSON.parse(JSON.stringify(modifiedData));
-      });
-      resolve(_data);
-    } catch (err) {
-      reject(err);
-    }
+    realm.write(() => {
+      try {
+        realm.create("MmBook", new MMBook(data), "modified");
+      } catch (err) {
+        console.log(err);
+      }
+    });
   });
 };
 
