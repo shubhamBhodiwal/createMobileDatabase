@@ -78,8 +78,9 @@ const schema = [
   },
   {
     name: "RefBook",
-    primaryKey: "book_id",
+    primaryKey: "_id",
     properties: {
+      _id: "string",
       book_name: "string",
       remedy_id_arr: "string",
       section_id_arr: "string",
@@ -156,7 +157,9 @@ const config = (version, path) => {
 
 class MMJson {
   constructor(mmData) {
-    this._id = `${mmData[0]};${mmData[1]};${mmData[2]}`;
+    this._id = `${mmData[0]};${mmData[1]};${mmData[2]};${
+      mmData[10] || "English"
+    }`;
     this.book_id = Number(mmData[0]);
     this.remedy_id = Number(mmData[1]);
     this.section_id = Number(mmData[2]);
@@ -167,6 +170,7 @@ class MMJson {
     this.remedy_name = mmData[7] ? mmData[7] : null;
     this.remedy_abbr = mmData[8] ? mmData[8] : null;
     this.section_name = mmData[9] ? mmData[9] : null;
+    this.language = mmData[10] || "English";
   }
 }
 class Word {
@@ -185,11 +189,12 @@ class MMSection {
 }
 class RefBook {
   constructor(book) {
+    this._id = `${book[0]};${book[4] || "eng"}`;
     this.book_id = Number(book[0]);
     this.book_name = book[1];
     this.section_id_arr = book[2].join(",");
     this.remedy_id_arr = book[3].join(",");
-    this.language = book[4] || "eng";
+    this.language = book[4] || "English";
     this.size = !isNaN(book[5]) ? Number(book[5]) : null;
   }
 }
@@ -326,11 +331,13 @@ const metadata = async () => {
   let data;
   data = await writeFile({
     query: `select mm2.book_id , mm2.remedy_id , mm2.section_id , mm2.start_pos , mm2.end_pos ,
-        mm2.no_of_lines_sections_has, LOWER(onm2.book_name) as book_name, LOWER(r."name" )as remedy_name , LOWER(r.abbreviation) as remedy_abbr, LOWER(sm.name)
-         as section_name  from materica_medica mm2 inner join  oldbookid_newbookid_mapping onm2
-        on mm2.book_id = onm2.old_book_id inner join remedy r on r.remedy_id = mm2.remedy_id + 1  inner join section_mm sm on sm.section_id = mm2.section_id
-        where book_id  = any(select old_book_id from
-            oldbookid_newbookid_mapping onm where new_book_id = any(select book_id from customer_books cb)) `,
+    mm2.no_of_lines_sections_has, LOWER(onm2.book_name) as book_name, LOWER(r."name" )as remedy_name , LOWER(r.abbreviation) as remedy_abbr, LOWER(sm.name)
+     as section_name, bi."language"  from materica_medica mm2 inner join  oldbookid_newbookid_mapping onm2 
+    on mm2.book_id = onm2.old_book_id 
+    inner join book_info bi on onm2.new_book_id = bi.book_id
+    inner join remedy r on r.remedy_id = mm2.remedy_id + 1  inner join section_mm sm on sm.section_id = mm2.section_id
+    where mm2.book_id  = any(select old_book_id from
+        oldbookid_newbookid_mapping onm where new_book_id = any(select book_id from customer_books cb)) `,
     objectClass: MMJson,
     objectType: "MmJson",
   });
