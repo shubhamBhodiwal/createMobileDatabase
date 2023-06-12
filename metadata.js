@@ -411,9 +411,9 @@ const metadata = async () => {
 
   data = await writeFile({
     query: `select   mm.book_id, LOWER(onm.book_name) as book_name, array_agg(distinct mm.section_id) as section_id_arr, array_agg(distinct mm.remedy_id) as remedy_id_arr,
-     bi."language" from materica_medica mm inner join oldbookid_newbookid_mapping onm on mm.book_id = onm.old_book_id  
-     inner join book_info bi on bi.book_id = onm.new_book_id
-     where onm.new_book_id = any(select book_id from customer_books cb) group by mm.book_id, onm.book_name, bi."language" `,
+    bi."language" from materica_medica mm inner join oldbookid_newbookid_mapping onm on mm.book_id = onm.old_book_id  
+    inner join book_info bi on bi.book_id = onm.new_book_id
+    where onm.new_book_id = any(select book_id from customer_books cb) group by mm.book_id, onm.book_name, bi."language" `,
     objectClass: RefBook,
     objectType: "RefBook",
   });

@@ -139,22 +139,31 @@ const upsert = async ({ data, book_id, objectType, objectClass }) => {
     realm = await Realm.open(config(book_id, SCHEMA_VERSION, REP_FILE_PATH));
   }
   return await new Promise((resolve, reject) => {
-    realm.write(() => {
-      for (let i = 0; i < data.length; i++) {
-        try {
-          realm.create(objectType, new objectClass(data[i]), "modified");
-        } catch (err) {
-          console.log(err);
+    try {
+      let _data;
+      realm.write(() => {
+        const arr = [];
+        for (let i = 0; i < data.length; i++) {
+          const modifiedData = realm.create(
+            objectType,
+            new objectClass(data[i]),
+            "modified"
+          );
+          arr.push(JSON.parse(JSON.stringify(modifiedData)));
         }
-      }
-    });
+        _data = arr;
+      });
+      resolve(_data);
+    } catch (err) {
+      reject(err);
+    }
   });
 };
 
 const realmREPFile = async () => {
   try {
     const books = await pgPool.query(
-      `select book_id from book_info where book_id in (select book_id from book) and book_id in (select distinct book_id from rubric r );`
+      `select book_id from book_info where book_id in (select book_id from book) and book_id = 210000014`
     );
     console.log(books.rowCount, books.rows);
     const bookList = books.rows;
@@ -166,7 +175,7 @@ const realmREPFile = async () => {
       console.log(i, { book_id: bookList[i].book_id });
       const rubrics =
         await pgPool.query(`select  distinct rubric_id, book_id, section_id, name, level_id, parent_id, rubric_hierarchy, 
-                    rubric_order, has_child, super_parent_id, rubric_hierarchy_id, remedy_id_arr from rubric where book_id = ${bookList[i].book_id}`);
+        rubric_order, has_child, super_parent_id, rubric_hierarchy_id, remedy_id_arr from rubric where book_id = ${bookList[i].book_id}`);
 
       const totalCount = rubrics.rowCount;
       for (let size = 0; size < totalCount; size = size + 1000) {

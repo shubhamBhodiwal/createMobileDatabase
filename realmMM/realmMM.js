@@ -44,7 +44,7 @@ const config = (book_id, version, path) => {
     path: `${path}/${book_id}-MM.realm`,
     schema,
     schemaVersion: version,
-    migration: () => {},
+    migration: () => { },
   };
 };
 
@@ -80,13 +80,20 @@ const upsert = async ({ data, book_id }) => {
     realm = await Realm.open(config(book_id, SCHEMA_VERSION, MM_FILE_PATH));
   }
   return await new Promise((resolve, reject) => {
-    realm.write(() => {
-      try {
-        realm.create("MmBook", new MMBook(data), "modified");
-      } catch (err) {
-        console.log(err);
-      }
-    });
+    try {
+      let _data;
+      realm.write(() => {
+        const modifiedData = realm.create(
+          "MmBook",
+          new MMBook(data),
+          "modified"
+        );
+        _data = JSON.parse(JSON.stringify(modifiedData));
+      });
+      resolve(_data);
+    } catch (err) {
+      reject(err);
+    }
   });
 };
 
@@ -101,7 +108,7 @@ const insertBook = async (book_id, MMData = []) => {
   inner join section_mm sm  on sm.section_id = mm2.section_id  where book_id = ${book_id} order by start_pos;`);
     const MMData = result.rows;
     const indexlen = result.rowCount;
-
+    console.log(`info - ${indexlen}`)
     const fs_read = util.promisify(fs.read);
     const fs_open = util.promisify(fs.open);
     const bookFD = await fs_open(
@@ -110,7 +117,6 @@ const insertBook = async (book_id, MMData = []) => {
     );
     const book = bookFD;
 
-    // console.log({ indexlen })
     for (let i = 0; i < indexlen; i++) {
       const item = MMData[i];
       const buffer = Buffer.alloc(
@@ -123,7 +129,6 @@ const insertBook = async (book_id, MMData = []) => {
         Number(item.end_pos) - Number(item.start_pos),
         Number(item.start_pos) + 1
       );
-      // await fs_close(book);
       const Y = 10,
         X = 5;
       lineBufferObj = lineBufferObj.buffer
@@ -131,7 +136,6 @@ const insertBook = async (book_id, MMData = []) => {
         .map((val) => (val === 13 ? 10 : val));
       const line_text = iconv.decode(lineBufferObj, "macroman");
       await upsert({ data: { ...item, text_data: line_text }, book_id });
-      // console.log({ i, indexlen });
     }
     console.log("completed", { book_id });
   } else {
@@ -140,14 +144,16 @@ const insertBook = async (book_id, MMData = []) => {
 };
 const realmMMFile = async () => {
   // const materiaMedicaData = await readJSONDataFromFile(MATERIA_MEDICA_PATH);
-
   // await insertMMData(pgPool,materiaMedicaData);
 
+  const SpecificBookIds = []
   const result = await pgPool.query(
     "select distinct book_id from materica_medica mm2 order by book_id ;"
   );
-  for (let i = 0; i < result.rowCount; i++) {
-    await insertBook(result.rows[i].book_id);
+  const MMBookList = SpecificBookIds?.length ? SpecificBookIds : result.rows
+
+  for (let i = 0; i < MMBookList.length; i++) {
+    await insertBook(MMBookList[i].book_id);
   }
   console.log("all book completed");
 };
