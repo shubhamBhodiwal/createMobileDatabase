@@ -1,15 +1,13 @@
 const pg = require("pg");
 const fs = require("fs");
 const Realm = require("realm");
-const { realmMMFile } = require("./realmMM/realmMM");
-const { realmREPFile } = require("./realmREP/realmREP");
 const {
   DATABASE_CONNECTION_STRING,
   SCHEMA_VERSION,
   METADATA_FILE_PATH,
   MM_FILE_PATH,
   REP_FILE_PATH,
-} = require("./config");
+} = require("../config");
 
 const pgPool = new pg.Pool({
   connectionString: DATABASE_CONNECTION_STRING,
@@ -152,15 +150,14 @@ const config = (version, path) => {
     path: `${path}/db.realm`,
     schema,
     schemaVersion: version,
-    migration: () => {},
+    migration: () => { },
   };
 };
 
 class MMJson {
   constructor(mmData) {
-    this._id = `${mmData[0]};${mmData[1]};${mmData[2]};${
-      mmData[10] || "English"
-    }`;
+    this._id = `${mmData[0]};${mmData[1]};${mmData[2]};${mmData[10] || "English"
+      }`;
     this.book_id = Number(mmData[0]);
     this.remedy_id = Number(mmData[1]);
     this.section_id = Number(mmData[2]);
@@ -303,7 +300,7 @@ const writeFile = async ({ query, objectType, objectClass }) => {
               ...r,
               size: Math.ceil(
                 fs.statSync(REP_FILE_PATH + `/${r.book_id}-REP.realm`).size /
-                  (1024 * 1024)
+                (1024 * 1024)
               ),
             });
           });
@@ -313,7 +310,7 @@ const writeFile = async ({ query, objectType, objectClass }) => {
               ...r,
               size: Math.ceil(
                 fs.statSync(MM_FILE_PATH + `/${r.book_id}-MM.realm`).size /
-                  (1024 * 1024)
+                (1024 * 1024)
               ),
             });
           });
@@ -331,10 +328,7 @@ const writeFile = async ({ query, objectType, objectClass }) => {
   }
 };
 
-const metadata = async () => {
-  await realmREPFile();
-  await realmMMFile();
-
+const CreateMetadata = async () => {
   realm = await Realm.open(config(SCHEMA_VERSION, METADATA_FILE_PATH));
 
   let data;
@@ -346,20 +340,20 @@ const metadata = async () => {
     inner join book_info bi on onm2.new_book_id = bi.book_id
     inner join remedy r on r.remedy_id = mm2.remedy_id + 1  inner join section_mm sm on sm.section_id = mm2.section_id
     where mm2.book_id  = any(select old_book_id from
-        oldbookid_newbookid_mapping onm where new_book_id = any(select book_id from customer_books cb))`,
+        oldbookid_newbookid_mapping onm where new_book_id = any(select book_id from customer_books cb)) and onm2.old_book_id in (2001, 2003, 2030, 2031, 2020)`,
     objectClass: MMJson,
     objectType: "MmJson",
   });
   console.log("MMJSON");
   data = await pgPool.query(
-    "select book_id from book_info where book_id in (select book_id from book) and book_id in (select distinct book_id from rubric r )"
+    "select book_id from book_info where book_id in (select book_id from book) and book_id  =210000014 or book_id = 110000054 "
   );
   data = await writeFile({
     query: ` select LOWER(b.book_name) as book_name , b.book_id, bi.author, bi.abbreviation, bi."language"  from
     book b left join book_info bi on  bi.book_id = b.book_id
     where b.book_id = any('{${data.rows
-      .map((item) => item.book_id)
-      .join(",")}}')`,
+        .map((item) => item.book_id)
+        .join(",")}}')`,
     objectClass: Book,
     objectType: "Book",
   });
@@ -413,7 +407,7 @@ const metadata = async () => {
     query: `select   mm.book_id, LOWER(onm.book_name) as book_name, array_agg(distinct mm.section_id) as section_id_arr, array_agg(distinct mm.remedy_id) as remedy_id_arr,
     bi."language" from materica_medica mm inner join oldbookid_newbookid_mapping onm on mm.book_id = onm.old_book_id  
     inner join book_info bi on bi.book_id = onm.new_book_id
-    where onm.new_book_id = any(select book_id from customer_books cb) group by mm.book_id, onm.book_name, bi."language" `,
+    where onm.new_book_id = any(select book_id from customer_books cb) and onm.old_book_id  in (2003, 2030, 2001, 2020, 2031 ) group by mm.book_id, onm.book_name, bi."language" `,
     objectClass: RefBook,
     objectType: "RefBook",
   });
@@ -451,7 +445,8 @@ const metadata = async () => {
       console.log("db.realm.note ");
     }
   });
-  process.exit(1);
 };
 
-metadata();
+
+
+module.exports = { CreateMetadata }

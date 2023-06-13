@@ -142,15 +142,12 @@ const insertBook = async (book_id, MMData = []) => {
     console.log("Error => .data file not found for book " + book_id);
   }
 };
-const realmMMFile = async () => {
-  // const materiaMedicaData = await readJSONDataFromFile(MATERIA_MEDICA_PATH);
-  // await insertMMData(pgPool,materiaMedicaData);
+const CreateMMFile = async (SpecificBookIds) => {
 
-  const SpecificBookIds = []
   const result = await pgPool.query(
     "select distinct book_id from materica_medica mm2 order by book_id ;"
   );
-  const MMBookList = SpecificBookIds?.length ? SpecificBookIds : result.rows
+  const MMBookList = SpecificBookIds?.length ? SpecificBookIds?.map(item => ({ book_id: item })) : result.rows
 
   for (let i = 0; i < MMBookList.length; i++) {
     await insertBook(MMBookList[i].book_id);
@@ -158,4 +155,4 @@ const realmMMFile = async () => {
   console.log("all book completed");
 };
 
-module.exports = { realmMMFile };
+module.exports = { CreateMMFile };
