@@ -163,25 +163,21 @@ const upsert = async ({ data, book_id, objectType, objectClass }) => {
 const CreateREPFile = async (SpecificBookIds) => {
   try {
     const books = await pgPool.query(
-      `select book_id from book_info where book_id in (select book_id from book) and book_id = 210000014`
+      `select book_id from book_info where book_id in (select book_id from book)`
     );
 
-    const bookList =  SpecificBookIds?.length ? SpecificBookIds?.map(item => ({ book_id: item })) : result.rows
+    const bookList = SpecificBookIds?.length ? SpecificBookIds?.map(item => ({ book_id: item })) : result.rows
 
-    console.log(books.rowCount, books.rows);
+    console.log(bookList.length, bookList);
     for (let i = 0; i < bookList.length; i++) {
       //used to select different column from rubric table
-      const isBookReliable = bookList[i].book_id === 110000054;
       realm = await Realm.open(
         config(bookList[i].book_id, SCHEMA_VERSION, REP_FILE_PATH)
       );
 
       console.log(i, { book_id: bookList[i].book_id });
       const rubrics =
-        await pgPool.query(isBookReliable ?
-          `select  distinct rubric_id, book_id, section_id, german_name as  name, level_id, parent_id,rubric_hierarchy_german as rubric_hierarchy, 
-          rubric_order, has_child, super_parent_id, rubric_hierarchy_id, remedy_id_arr from rubric where book_id = ${bookList[i].book_id}`
-          :
+        await pgPool.query(
           `select  distinct rubric_id, book_id, section_id, name, level_id, parent_id, rubric_hierarchy, 
         rubric_order, has_child, super_parent_id, rubric_hierarchy_id, remedy_id_arr from rubric where book_id = ${bookList[i].book_id}`);
 
