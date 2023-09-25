@@ -5,17 +5,17 @@ const { CreateREPFile } = require("./RepertoryBooks/RepertoryBooks");
 
 
 async function CreateDatabase() {
-    const REPBookIds = [210000014]
-    const MMBookIds = [2003, 2030, 2020, 2001, 2031]
+    const REPBookIds = [ 110000101, 210000014]
+    const MMBookIds = [2003, 2030, 2020, 2001, 2031, 2039]
 
     await CreateREPFile(REPBookIds);
 
     await CreateMMTable();
     await CreateMMFile(MMBookIds);
 
-    await CreateMetadata();
+    await CreateMetadata(REPBookIds,MMBookIds);
 
-    process.exit(1);
+    // process.exit(1);
 }
 
 

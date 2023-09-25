@@ -163,7 +163,7 @@ const upsert = async ({ data, book_id, objectType, objectClass }) => {
 const CreateREPFile = async (SpecificBookIds) => {
   try {
     const books = await pgPool.query(
-      `select book_id from book_info where book_id in (select book_id from book) and book_id = 210000014`
+      `select book_id from book_info where book_id in (select book_id from book) `
     );
 
     const bookList =  SpecificBookIds?.length ? SpecificBookIds?.map(item => ({ book_id: item })) : result.rows
@@ -171,7 +171,7 @@ const CreateREPFile = async (SpecificBookIds) => {
     console.log(books.rowCount, books.rows);
     for (let i = 0; i < bookList.length; i++) {
       //used to select different column from rubric table
-      const isBookReliable = bookList[i].book_id === 110000054;
+      const isBookReliable = bookList[i].book_id === 110000101;
       realm = await Realm.open(
         config(bookList[i].book_id, SCHEMA_VERSION, REP_FILE_PATH)
       );
@@ -201,7 +201,12 @@ const CreateREPFile = async (SpecificBookIds) => {
               ","
             )}}') group by rubric_id , remedy_id`
           );
-          crossReferenceMapping = await pgPool.query(
+          crossReferenceMapping = await pgPool.query(isBookReliable?
+            `select cr.cross_reference_id, cr.rubric_id, cr.cross_reference_rubric_id, cr.cross_ref_hierarchy_de as cross_ref_hierarchy, r.book_id, r.section_id, r.rubric_hierarchy_id,
+      cr.bracket_details , b.book_name from cross_reference cr left join rubric r on r.rubric_id = cr.cross_reference_rubric_id left join book b on
+      b.book_id = r.book_id where cr.cross_reference_rubric_id NOTNULL and cr.rubric_id = Any('{${rubricIds.join(
+              ","
+            )}}')`:
             `select cr.cross_reference_id, cr.rubric_id, cr.cross_reference_rubric_id, cr.cross_ref_hierarchy, r.book_id, r.section_id, r.rubric_hierarchy_id,
       cr.bracket_details , b.book_name from cross_reference cr left join rubric r on r.rubric_id = cr.cross_reference_rubric_id left join book b on
       b.book_id = r.book_id where cr.cross_reference_rubric_id NOTNULL and cr.rubric_id = Any('{${rubricIds.join(

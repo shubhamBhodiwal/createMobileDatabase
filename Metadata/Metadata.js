@@ -328,7 +328,7 @@ const writeFile = async ({ query, objectType, objectClass }) => {
   }
 };
 
-const CreateMetadata = async () => {
+const CreateMetadata = async (REPBookIds, MMBookIds) => {
   realm = await Realm.open(config(SCHEMA_VERSION, METADATA_FILE_PATH));
 
   let data;
@@ -340,13 +340,14 @@ const CreateMetadata = async () => {
     inner join book_info bi on onm2.new_book_id = bi.book_id
     inner join remedy r on r.remedy_id = mm2.remedy_id + 1  inner join section_mm sm on sm.section_id = mm2.section_id
     where mm2.book_id  = any(select old_book_id from
-        oldbookid_newbookid_mapping onm where new_book_id = any(select book_id from customer_books cb)) and onm2.old_book_id in (2001, 2003, 2030, 2031, 2020)`,
+        oldbookid_newbookid_mapping onm where new_book_id = any(select book_id from customer_books cb)) and onm2.old_book_id in (${MMBookIds.join(',')})`,
     objectClass: MMJson,
     objectType: "MmJson",
   });
   console.log("MMJSON");
   data = await pgPool.query(
-    "select book_id from book_info where book_id in (select book_id from book) and book_id  =210000014 or book_id = 110000054 "
+    `select book_id from book_info where book_id in (select book_id from book) and book_id  in(${REPBookIds.join(',')
+    })`
   );
   data = await writeFile({
     query: ` select LOWER(b.book_name) as book_name , b.book_id, bi.author, bi.abbreviation, bi."language"  from
@@ -368,7 +369,8 @@ const CreateMetadata = async () => {
   });
   console.log("MMRemedy");
   data = await writeFile({
-    query: `select section_id , LOWER(name) as name, book_id, rubric_id from rubric r  where level_id = 0 order by book_id,  rubric_order`,
+    query: `select section_id , CASE WHEN book_id = 110000101 THEN LOWER(german_name)
+    ELSE LOWER(name) END as name, book_id, rubric_id from rubric r  where level_id = 0 order by book_id,  rubric_order`,
     objectClass: Section,
     objectType: "Section",
   });
@@ -407,14 +409,16 @@ const CreateMetadata = async () => {
     query: `select   mm.book_id, LOWER(onm.book_name) as book_name, array_agg(distinct mm.section_id) as section_id_arr, array_agg(distinct mm.remedy_id) as remedy_id_arr,
     bi."language" from materica_medica mm inner join oldbookid_newbookid_mapping onm on mm.book_id = onm.old_book_id  
     inner join book_info bi on bi.book_id = onm.new_book_id
-    where onm.new_book_id = any(select book_id from customer_books cb) and onm.old_book_id  in (2003, 2030, 2001, 2020, 2031 ) group by mm.book_id, onm.book_name, bi."language" `,
+    where onm.new_book_id = any(select book_id from customer_books cb) and onm.old_book_id  in (${MMBookIds.join(',')}) group by mm.book_id, onm.book_name, bi."language" `,
     objectClass: RefBook,
     objectType: "RefBook",
   });
   console.log("Refbook");
   data = await writeFile({
     query: `select array_agg(section_id) as section_id, LOWER(name) as name
-            from "section_mm" group by LOWER(name) order by LOWER(name)`,
+    from "section_mm" where section_id in (select section_id from materica_medica mm where book_id in (${MMBookIds.join(',')})
+) group by LOWER(name) order by LOWER(name)            
+    `,
     objectClass: MMSection,
     objectType: "MmSection",
   });
