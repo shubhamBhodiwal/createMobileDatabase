@@ -1,5 +1,6 @@
 const insertMMData = async (pool,dataArray) => {
     try {
+      await pool.query('DELETE from materica_medica');
       const query = `
         INSERT INTO materica_medica (book_id, remedy_id, section_id, start_pos, end_pos, no_of_lines_sections_has)
         VALUES ($1, $2, $3, $4, $5, $6)

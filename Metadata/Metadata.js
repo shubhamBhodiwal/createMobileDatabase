@@ -417,7 +417,8 @@ const CreateMetadata = async (REPBookIds, MMBookIds) => {
   console.log("Refbook");
   data = await writeFile({
     query: `select array_agg(section_id) as section_id, LOWER(name) as name
-            from "section_mm" group by LOWER(name) order by LOWER(name)`,
+    from "section_mm" where section_id in (select section_id from materica_medica mm where book_id in (${MMBookIds.join(',')})
+) group by LOWER(name) order by LOWER(name)`,
     objectClass: MMSection,
     objectType: "MmSection",
   });
