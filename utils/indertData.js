@@ -1,11 +1,14 @@
 const insertMMData = async (pool,dataArray) => {
     try {
+      await pool.query('delete from materica_medica;')
+      let count=0
       const query = `
         INSERT INTO materica_medica (book_id, remedy_id, section_id, start_pos, end_pos, no_of_lines_sections_has)
         VALUES ($1, $2, $3, $4, $5, $6)
       `;
   
       for (const data of dataArray) {
+        console.log(++count,dataArray.length)
         const values = [data.book_id, data.remedy_id, data.section_id, data.startPos, data.endPos, data.noOfLinesSectionsHas];
         await pool.query(query, values);
       }
